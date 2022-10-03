@@ -57,7 +57,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
         break;
       }
       case RNObjcSerialisableType.nonnullObject: {
-        if (!data) throw new Error(`Argument at index ${i} expects a nonnull Object value`);
+        if (data === null) throw new Error(`Argument at index ${i} expects a nonnull Object value`);
         nativeArguments.push(Utils.dataSerialize(data));
         break;
       }

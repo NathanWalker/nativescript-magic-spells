@@ -72,7 +72,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
         nativeArguments.push(data);
         break;
       case RNObjcSerialisableType.nonnullString:
-        if (Utils.isString(data)) throw new Error(`Expected a string but got ${data}`);
+        if (!Utils.isString(data)) throw new Error(`Expected a string but got ${data}`);
         nativeArguments.push(data);
         break;
       case RNObjcSerialisableType.nonnullNumber:

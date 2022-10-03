@@ -5,7 +5,7 @@ import type { IOptions } from 'glob';
 import * as path from 'path';
 import { promisify } from 'util';
 import type { HookArgs } from './hookArgs';
-export enum RNObjcSerialisableType {
+enum RNObjcSerialisableType {
   other, // Anything we fail to parse!
   void, // void
   string, // NSString*
@@ -45,7 +45,7 @@ const logPrefix = '[react-native-podspecs/hooks/before-prepareNativeApp.js]';
  *   (Just a JSON file. Not to be confused with a clang module.modulemap file).
  * @returns a list of package names in which podspecs were found and autolinked.
  */
-export async function autolinkIos({
+async function autolinkIos({
   dependencies,
   projectDir,
   outputHeaderPath,
@@ -751,7 +751,7 @@ function parseObjcTypeToEnum(objcType: string): RNObjcSerialisableType {
 /**
  * On iOS, autolink any React Native native modules.
  */
-export default async function autolinkIosHook(hookArgs: HookArgs) {
+export = async function (hookArgs: HookArgs) {
   const {
     projectData,
     platformData: { platformNameLowerCase },
@@ -808,6 +808,4 @@ export default async function autolinkIosHook(hookArgs: HookArgs) {
   console.log(
     `${logPrefix} ... Finished autolinking React Native iOS native modules.`
   );
-}
-
-// export = autolinkIosHook;
+};

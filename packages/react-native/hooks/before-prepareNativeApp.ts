@@ -31,7 +31,7 @@ const exists = promisify(fs.exists);
  *   Packages.java to.
  * @returns a list of package names in which podspecs were found and autolinked.
  */
-export async function autolinkAndroid({ dependencies, projectDir, outputModulesJsonPath, outputPackagesJavaPath }: { dependencies: string[]; projectDir: string; outputModulesJsonPath: string; outputPackagesJavaPath: string }) {
+async function autolinkAndroid({ dependencies, projectDir, outputModulesJsonPath, outputPackagesJavaPath }: { dependencies: string[]; projectDir: string; outputModulesJsonPath: string; outputPackagesJavaPath: string }) {
   const autolinkingInfo = (await Promise.all(dependencies.map((npmPackageName) => mapPackageNameToAutolinkingInfo({ npmPackageName, projectDir }))))
     .filter((p) => !!p)
     .flat(1)
@@ -124,7 +124,7 @@ async function mapPackageNameToAutolinkingInfo({ npmPackageName, projectDir, use
   };
 }
 
-export async function findManifest(folder: string): Promise<string | null> {
+async function findManifest(folder: string): Promise<string | null> {
   const manifestPath = (
     await globProm(path.join('**', 'AndroidManifest.xml'), {
       cwd: folder,
@@ -146,7 +146,7 @@ function globProm(pattern: string, options: IOptions): Promise<string[]> {
 /**
  * Read in an Android manifest and extract the package name from it.
  */
-export async function getAndroidPackageName(manifestPath: string): Promise<string> {
+async function getAndroidPackageName(manifestPath: string): Promise<string> {
   const bgRed = '\x1b[41m';
   const dim = '\x1b[2m';
   const underline = '\x1b[4m';
@@ -246,7 +246,7 @@ function findLibraryName(root: string, sourceDir: string) {
   }
 }
 
-export async function findComponentDescriptors(packageRoot: string): Promise<string[]> {
+async function findComponentDescriptors(packageRoot: string): Promise<string[]> {
   const filepaths = await globProm('**/+(*.js|*.jsx|*.ts|*.tsx)', {
     cwd: packageRoot,
     nodir: true,
@@ -264,7 +264,7 @@ export async function findComponentDescriptors(packageRoot: string): Promise<str
 
 const CODEGEN_NATIVE_COMPONENT_REGEX = /codegenNativeComponent(<.*>)?\s*\(\s*["'`](\w+)["'`](,?[\s\S]+interfaceOnly:\s*(\w+))?/m;
 
-export function extractComponentDescriptors(contents: string): string {
+function extractComponentDescriptors(contents: string): string {
   const match = contents.match(CODEGEN_NATIVE_COMPONENT_REGEX);
   if (!(match?.[4] === 'true') && match?.[2]) {
     return `${match[2]}ComponentDescriptor`;
@@ -317,7 +317,7 @@ async function writePackagesJavaFile({ moduleInfo, outputPackagesJavaPath }: { m
 /**
  * autolink any React Native native modules.
  */
-export default async function prepareNativeApp(hookArgs: HookArgs) {
+export = async function (hookArgs: HookArgs) {
   const platformName = (hookArgs && hookArgs.platformData && hookArgs.platformData.normalizedPlatformName).toLowerCase();
 
   // Any iOS autolinking is handled in react-native-podspecs.
@@ -350,6 +350,6 @@ export default async function prepareNativeApp(hookArgs: HookArgs) {
   const reset = '\x1b[0m';
   autolinkingInfo.forEach((packageName) => console.log(`${logPrefix} Autolinked ${green}${packageName}${reset}!`));
   console.log(`${logPrefix} ... Finished autolinking React Native Android native modules.`);
-}
+};
 
 // export = autolinkAndroidHook;

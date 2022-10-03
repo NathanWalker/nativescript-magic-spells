@@ -13,4 +13,10 @@ export class DemoSharedReactNative extends DemoSharedBase {
         })
     );
   }
+  getName() {
+    console.log(Object.keys(NativeModules));
+  }
+  callbackTest() {
+    console.log('to do');
+  }
 }

@@ -10,9 +10,6 @@ export class HomeComponent {
       name: 'react-native',
     },
     {
-      name: 'react-native-autolinking',
-    },
-    {
       name: 'react-native-module-test',
     },
     {

@@ -1,11 +1,12 @@
 - [@ammarahm-ed/react-native](packages/react-native/README.md)
-- [@ammarahm-ed/react-native-autolinking](packages/react-native-autolinking/README.md)
 - [@ammarahm-ed/react-native-module-test](packages/react-native-module-test/README.md)
 - [@ammarahm-ed/react-native-podspecs](packages/react-native-podspecs/README.md)
 
-- [@ammarahm-ed/react-native](packages/react-native/README.md)
-- [@ammarahm-ed/react-native-module-test](packages/react-native-module-test/README.md)
-- [@ammarahm-ed/react-native-podspecs](packages/react-native-podspecs/README.md)
+# How to use?
+
+This workspace manages the suite of plugins listed above.
+
+In general, when in doubt with what to do, just `npm start`.
 
 # @ammarahm-ed/nativescript-magic-spells
 

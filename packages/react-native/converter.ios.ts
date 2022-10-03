@@ -68,7 +68,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
         nativeArguments.push(Utils.dataSerialize(data));
         break;
       case RNObjcSerialisableType.nonnullBoolean:
-        if (Utils.isBoolean(data)) throw new Error(`Expected a boolean but got ${data}`);
+        if (!Utils.isBoolean(data)) throw new Error(`Expected a boolean but got ${data}`);
         nativeArguments.push(data);
         break;
       case RNObjcSerialisableType.nonnullString:

@@ -49,7 +49,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
       }
       case RNObjcSerialisableType.nonnullArray: {
         if (!data) throw new Error(`Argument at index ${i} expects a nonnull Array value`);
-        nativeArguments.push(Utils.ios.collections.jsArrayToNSArray(data));
+        nativeArguments.push(Utils.ios.collections.jsArrayToNSArray(data as unknown[]));
         break;
       }
       case RNObjcSerialisableType.object: {

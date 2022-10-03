@@ -29,7 +29,6 @@ const execFile = promisify(cp.execFile);
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-// const logPrefix = '[react-native-autolinking/autolinkIos.js]';
 const logPrefix = '[react-native-podspecs/hooks/before-prepareNativeApp.js]';
 
 /**
@@ -771,15 +770,6 @@ export default async function autolinkIosHook(hookArgs: HookArgs) {
   const depsArr = Object.keys({ ...devDependencies, ...dependencies }).filter(
     (key) => !ignoredDepsSet.has(key)
   );
-
-  // This elaborate `require()` call is a workaround to enable requiring other
-  // packages developed in this monorepo. It'll work fine for end users, too.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  // const { autolinkIos } = require(path.dirname(
-  //   require.resolve('@ammarahm-ed/react-native-autolinking/package.json', {
-  //     paths: [__dirname, projectDir],
-  //   })
-  // )) as typeof ReactNativeAutolinking;
 
   console.log(`${logPrefix} Autolinking React Native iOS native modules...`);
 

@@ -44,7 +44,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
     const data = args[i];
     switch (argType) {
       case RNObjcSerialisableType.array: {
-        nativeArguments.push(Utils.ios.collections.jsArrayToNSArray(data));
+        nativeArguments.push(Utils.ios.collections.jsArrayToNSArray(data as unknown[]));
         break;
       }
       case RNObjcSerialisableType.nonnullArray: {

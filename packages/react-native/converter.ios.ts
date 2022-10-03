@@ -80,13 +80,14 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
         nativeArguments.push(Utils.dataSerialize(data));
         break;
       case RNObjcSerialisableType.RCTResponseSenderBlock: {
-        nativeArguments.push(
-          !data
-            ? undefined
-            : (value: unknown[]) => {
-                data(...(toJSValue(value) as unknown[]));
-              }
-        );
+        if (!data) {
+          nativeArguments.push(null);
+          break;
+        }
+        if (typeof data !== 'function') throw new Error(`Expected a function, but got ${data}`);
+        nativeArguments.push((...args: unknown[]) => {
+          data(...args.map((arg) => toJSValue(arg)));
+        });
         break;
       }
       case RNObjcSerialisableType.RCTResponseErrorBlock: {

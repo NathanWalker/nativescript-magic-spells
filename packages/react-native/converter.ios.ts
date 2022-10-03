@@ -77,7 +77,7 @@ export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args:
         break;
       case RNObjcSerialisableType.nonnullNumber:
         if (!Utils.isNumber(data)) throw new Error(`Expected a number but got ${data}`);
-        nativeArguments.push(data);
+        nativeArguments.push(Utils.dataSerialize(data));
         break;
       case RNObjcSerialisableType.RCTResponseSenderBlock: {
         nativeArguments.push(

@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Add a plugin description",
   "main": "index.js",
-  "typings": "index.d.ts",
+  "types": "index.d.ts",
   "scripts": {
-    "postinstall": "node hooks/postinstall.js"
+    "preuninstall": "node preuninstall",
+    "postinstall": "node postinstall"
   },
   "nativescript": {
     "platforms": {
@@ -20,7 +21,7 @@
     ]
   },
   "dependencies": {
-    "@ammarahm-ed/react-native-autolinking": "^1.0.0"
+    "glob": "^8.0.3"
   },
   "repository": {
     "type": "git",

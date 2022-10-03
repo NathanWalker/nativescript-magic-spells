@@ -5,6 +5,6 @@
     "outDir": "../../dist/out-tsc",
     "rootDirs": ["."]
   },
-  "exclude": ["**/*.spec.ts", "**/*.test.ts", "angular"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts", "angular", "hooks"],
   "include": ["**/*.ts", "references.d.ts"]
 }

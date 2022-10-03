@@ -3,12 +3,9 @@
   "version": "1.0.0",
   "description": "Add a plugin description",
   "main": "index.js",
-  "typings": "index.d.ts",
+  "types": "index.d.ts",
   "dependencies": {
     "glob": "^8.0.3"
-  },
-  "devDependencies": {
-    "@types/glob": "^8.0.0"
   },
   "repository": {
     "type": "git",

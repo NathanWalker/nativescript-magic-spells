@@ -9,16 +9,12 @@
         "outputPath": "dist/packages/react-native-podspecs",
         "tsConfig": "packages/react-native-podspecs/tsconfig.json",
         "packageJson": "packages/react-native-podspecs/package.json",
-        "main": "packages/react-native-podspecs/index.d.ts",
+        "main": "packages/react-native-podspecs/index.ts",
         "assets": [
           "packages/react-native-podspecs/*.md",
-          "packages/react-native-podspecs/hooks/before-prepareNativeApp.d.ts",
-          "packages/react-native-podspecs/hooks/before-prepareNativeApp.js",
-          "packages/react-native-podspecs/hooks/before-prepareNativeApp.js.map",
-          "packages/react-native-podspecs/hooks/postinstall.d.ts",
-          "packages/react-native-podspecs/hooks/postinstall.js",
-          "packages/react-native-podspecs/hooks/postinstall.js.map",
           "packages/react-native-podspecs/index.d.ts",
+          "packages/react-native-podspecs/postinstall.js",
+          "packages/react-native-podspecs/preuninstall.js",
           "packages/react-native-podspecs/platforms/ios/ReactNativePodspecs.podspec",
           "packages/react-native-podspecs/platforms/ios/lib/modulemap.json",
           "LICENSE",
@@ -40,6 +36,7 @@
       "executor": "@nrwl/workspace:run-commands",
       "options": {
         "commands": [
+          "./node_modules/.bin/tsc -p packages/react-native-podspecs/hooks/tsconfig.json",
           "node tools/scripts/build-finish.ts react-native-podspecs"
         ],
         "parallel": false

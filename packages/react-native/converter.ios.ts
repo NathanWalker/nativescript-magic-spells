@@ -1,30 +1,32 @@
 import { RNObjcSerialisableType } from '@ammarahm-ed/react-native-autolinking/RNObjcSerialisableType';
 import { Utils } from '@nativescript/core';
 
-//https://github.com/nativescript-community/expo-nativescript/blob/6524b9ff787c635cddf8a19799b2fcadc287e986/packages/expo-nativescript-adapter/NativeModulesProxy.ios.ts#L16
-export function toJSValue(value: unknown) {
+type ReactNativePrimitive = Date | string | number | null | ReactNativePrimitive[] | { [key: string]: ReactNativePrimitive };
+
+// https://github.com/nativescript-community/expo-nativescript/blob/6524b9ff787c635cddf8a19799b2fcadc287e986/packages/expo-nativescript-adapter/NativeModulesProxy.ios.ts#L16
+export function toJSValue(value: unknown): ReactNativePrimitive {
   if (value instanceof NSDictionary) {
-    const obj: any = {};
-    value.enumerateKeysAndObjectsUsingBlock((key: string, value: any, stop: interop.Reference<boolean>) => {
+    const obj: ReactNativePrimitive = {};
+    value.enumerateKeysAndObjectsUsingBlock((key: string, value: unknown) => {
       obj[key] = toJSValue(value);
     });
     return obj;
-  } else if (value instanceof NSArray) {
-    const arr: any[] = [];
-    value.enumerateObjectsUsingBlock((value: any, index: number, stop: interop.Reference<boolean>) => {
-      arr[index] = toJSValue(value);
-    });
-    return arr;
-  } else {
-    /**
-     * NSDate, NSString, NSNumber, and NSNull should all be automatically marshalled as Date, string, number, and null.
-     * @see https://docs.nativescript.org/core-concepts/ios-runtime/marshalling-overview#primitive-exceptions
-     *
-     * NULL, Nil, and nil are all implicitly converted to null.
-     * @see https://docs.nativescript.org/core-concepts/ios-runtime/marshalling-overview#null-values
-     */
-    return value as Date | string | number | null;
   }
+
+  if (value instanceof NSArray) {
+    const arr: ReactNativePrimitive[] = [];
+    value.enumerateObjectsUsingBlock((value: unknown) => arr.push(toJSValue(value)));
+    return arr;
+  }
+
+  /**
+   * NSDate, NSString, NSNumber, and NSNull should all be automatically marshalled as Date, string, number, and null.
+   * @see https://docs.nativescript.org/core-concepts/ios-runtime/marshalling-overview#primitive-exceptions
+   *
+   * NULL, Nil, and nil are all implicitly converted to null.
+   * @see https://docs.nativescript.org/core-concepts/ios-runtime/marshalling-overview#null-values
+   */
+  return value as Date | string | number | null;
 }
 
 export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args: any[], resolve?: (value: unknown) => void, reject?: (reason?: any) => void) {

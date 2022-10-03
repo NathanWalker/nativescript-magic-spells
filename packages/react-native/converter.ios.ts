@@ -29,8 +29,15 @@ export function toJSValue(value: unknown): ReactNativePrimitive {
   return value as Date | string | number | null;
 }
 
-export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args: any[], resolve?: (value: unknown) => void, reject?: (reason?: any) => void) {
-  const nativeArguments = [];
+type RCTResponseSenderBlockType = (...args: unknown[]) => void;
+type RCTResponseErrorBlockType = (value: NSError) => void;
+type RCTPromiseBlockType = (value: unknown) => void;
+type BlockTypes = RCTResponseSenderBlockType | RCTResponseErrorBlockType | RCTPromiseBlockType;
+
+type NativeArg = NSObject | BlockTypes;
+
+export function toNativeArguments(argumentTypes: RNObjcSerialisableType[], args: unknown[], resolve?: (value: unknown) => void, reject?: (reason?: unknown) => void): NativeArg[] {
+  const nativeArguments: NativeArg[] = [];
 
   for (let i = 0; i < argumentTypes.length; i++) {
     const argType = argumentTypes[i];

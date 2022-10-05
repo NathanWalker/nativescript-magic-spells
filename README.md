@@ -1,6 +1,5 @@
 - [@ammarahm-ed/react-native](packages/react-native/README.md)
 - [@ammarahm-ed/react-native-module-test](packages/react-native-module-test/README.md)
-- [@ammarahm-ed/react-native-podspecs](packages/react-native-podspecs/README.md)
 
 # How to use?
 

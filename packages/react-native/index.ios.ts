@@ -5,7 +5,7 @@ import { getModuleMethods, isPromise, TModuleMethodsType, TNativeModuleMap } fro
 export { NativeEventEmitter } from './core/EventEmitter/NativeEventEmitter';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const NativemModuleMap = require('@ammarahm-ed/react-native-podspecs/platforms/ios/lib/modulemap.json') as TNativeModuleMap;
+const NativemModuleMap = require('./platforms/ios/lib_community/modulemap.json') as TNativeModuleMap;
 
 class NativeModuleHolder {
   module: RCTBridgeModule;

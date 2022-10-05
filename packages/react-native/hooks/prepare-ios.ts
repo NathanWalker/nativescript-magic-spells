@@ -4,7 +4,6 @@ import * as glob from 'glob';
 import type { IOptions } from 'glob';
 import * as path from 'path';
 import { promisify } from 'util';
-import type { HookArgs } from './hookArgs';
 enum RNObjcSerialisableType {
   other, // Anything we fail to parse!
   void, // void
@@ -29,84 +28,15 @@ const execFile = promisify(cp.execFile);
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
-const logPrefix = '[react-native-podspecs/hooks/before-prepareNativeApp.js]';
-
-/**
- * Given a list of dependencies, autolinks any podspecs found within them, using
- * the React Native Community CLI search rules.
- * @param {object} args
- * @param args.dependencies The names of the npm dependencies to examine for
- *   autolinking.
- * @param args.projectDir The project directory (relative to which the package
- *   should be resolved).
- * @param args.outputHeaderPath An absolute path to output the header to.
- * @param args.outputPodfilePath An absolute path to output the Podfile to.
- * @param args.outputModuleMapPath An absolute path to output the module map to.
- *   (Just a JSON file. Not to be confused with a clang module.modulemap file).
- * @returns a list of package names in which podspecs were found and autolinked.
- */
-async function autolinkIos({
-  dependencies,
-  projectDir,
-  outputHeaderPath,
-  outputPodfilePath,
-  outputModuleMapPath,
-}: {
-  dependencies: string[];
-  projectDir: string;
-  outputHeaderPath: string;
-  outputPodfilePath: string;
-  outputModuleMapPath: string;
-}) {
-  const autolinkingInfo = (
-    await Promise.all(
-      dependencies.map((packageName) =>
-        mapPackageNameToAutolinkingInfo(packageName, projectDir)
-      )
-    )
-  )
-    .filter((p) => !!p)
-    .flat(1);
-
-  const moduleNamesToMethodDescriptionsCombined = autolinkingInfo.reduce(
-    (acc, { moduleNamesToMethodDescriptions }) => {
-      return Object.assign(acc, moduleNamesToMethodDescriptions);
-    },
-    {}
-  );
-
-  await Promise.all([
-    await writeHeaderFile({
-      headerEntries: autolinkingInfo.map(({ headerEntry }) => headerEntry),
-      outputHeaderPath,
-    }),
-
-    await writePodfile({
-      autolinkedDeps: autolinkingInfo.map(({ podfileEntry }) => podfileEntry),
-      outputPodfilePath,
-    }),
-
-    await writeModuleMapFile({
-      moduleNamesToMethodDescriptions: moduleNamesToMethodDescriptionsCombined,
-      outputModuleMapPath,
-    }),
-  ]);
-
-  return autolinkingInfo.map(({ packageName }) => packageName);
-}
+const logPrefix = '[react-native/hooks/before-prepareNativeApp.js]';
 
 /**
  * @param packageName The package name, e.g. 'react-native-module-test'.
  * @param projectDir The project directory (relative to which the package should
  *   be resolved).
  */
-async function mapPackageNameToAutolinkingInfo(
-  packageName: string,
-  projectDir: string
-) {
-  const packagePath = path.dirname(
-    require.resolve(`${packageName}/package.json`, { paths: [projectDir] })
-  );
+async function mapPackageNameToAutolinkingInfo(packageName: string, projectDir: string) {
+  const packagePath = path.dirname(require.resolve(`${packageName}/package.json`, { paths: [projectDir] }));
 
   const podspecs = await globProm('*.podspec', {
     cwd: packagePath,
@@ -122,11 +52,7 @@ async function mapPackageNameToAutolinkingInfo(
     podspecs,
   });
 
-  const { stdout: podspecContents } = await execFile('pod', [
-    'ipc',
-    'spec',
-    podspecFilePath,
-  ]);
+  const { stdout: podspecContents } = await execFile('pod', ['ipc', 'spec', podspecFilePath]);
 
   /**
    * These are the typings (that we're interested in), assuming a valid podspec.
@@ -139,16 +65,10 @@ async function mapPackageNameToAutolinkingInfo(
   } = JSON.parse(podspecContents);
 
   // The other platforms are 'osx', 'macos', 'tvos', and 'watchos'.
-  const {
-    name: podSpecName = packageName,
-    source_files: commonSourceFiles = [],
-    ios: { source_files: iosSourceFiles } = { source_files: [] },
-  } = podspecParsed;
+  const { name: podSpecName = packageName, source_files: commonSourceFiles = [], ios: { source_files: iosSourceFiles } = { source_files: [] } } = podspecParsed;
 
   if (!podspecParsed.name) {
-    console.warn(
-      `${logPrefix} Podspec "${podspecFileName}" for npm package "${packageName}" did not specify a name, so using "${packageName}" instead.`
-    );
+    console.warn(`${logPrefix} Podspec "${podspecFileName}" for npm package "${packageName}" did not specify a name, so using "${packageName}" instead.`);
   }
 
   const sourceFilePaths = await getSourceFilePaths({
@@ -180,8 +100,7 @@ async function mapPackageNameToAutolinkingInfo(
         packageName,
         headerEntry,
         podfileEntry,
-        moduleNamesToMethodDescriptions:
-          interfaces.moduleNamesToMethodDescriptions,
+        moduleNamesToMethodDescriptions: interfaces.moduleNamesToMethodDescriptions,
       };
     })
   );
@@ -195,22 +114,13 @@ async function mapPackageNameToAutolinkingInfo(
  *   '/Users/jamie/Documents/git/nativescript-magic-spells/dist/packages/react-native-module-test'
  * @param args.podspecs An array of absolute paths to podspecs.
  */
-function resolvePodspecFilePath({
-  packageName,
-  packagePath,
-  podspecs,
-}: {
-  packageName: string;
-  packagePath: string;
-  podspecs: string[];
-}) {
+function resolvePodspecFilePath({ packageName, packagePath, podspecs }: { packageName: string; packagePath: string; podspecs: string[] }) {
   const packagePodspec = path.join(packageName, `${packagePath}.podspec`);
 
   // If there are multiple podspecs, prefer the podspec named after the package
   // otherwise, just take the first match (all of this is consistent with how
   // the React Native Community CLI works).
-  const resolvedPodspecPath =
-    podspecs.find((podspec) => podspec === packagePodspec) || podspecs[0];
+  const resolvedPodspecPath = podspecs.find((podspec) => podspec === packagePodspec) || podspecs[0];
 
   return {
     podspecFileName: path.basename(resolvedPodspecPath),
@@ -226,38 +136,15 @@ function resolvePodspecFilePath({
  * @param args.packagePath The absolute path to the package, e.g.
  *   '/Users/jamie/Documents/git/nativescript-magic-spells/dist/packages/react-native-module-test'
  */
-async function getSourceFilePaths({
-  commonSourceFiles,
-  iosSourceFiles,
-  packagePath,
-}: {
-  commonSourceFiles: string | string[];
-  iosSourceFiles: string | string[];
-  packagePath: string;
-}) {
+async function getSourceFilePaths({ commonSourceFiles, iosSourceFiles, packagePath }: { commonSourceFiles: string | string[]; iosSourceFiles: string | string[]; packagePath: string }) {
   // Normalise to an array, treating empty-string as an empty array.
-  const commonSourceFilesArr = commonSourceFiles
-    ? Array.isArray(commonSourceFiles)
-      ? commonSourceFiles
-      : [commonSourceFiles]
-    : [];
-  const iosSourceFilesArr = iosSourceFiles
-    ? Array.isArray(iosSourceFiles)
-      ? iosSourceFiles
-      : [iosSourceFiles]
-    : [];
+  const commonSourceFilesArr = commonSourceFiles ? (Array.isArray(commonSourceFiles) ? commonSourceFiles : [commonSourceFiles]) : [];
+  const iosSourceFilesArr = iosSourceFiles ? (Array.isArray(iosSourceFiles) ? iosSourceFiles : [iosSourceFiles]) : [];
 
   // Take all the distinct patterns.
-  const platformSourceFilesArr = [
-    ...new Set([...commonSourceFilesArr, ...iosSourceFilesArr]),
-  ];
+  const platformSourceFilesArr = [...new Set([...commonSourceFilesArr, ...iosSourceFilesArr])];
 
-  const sourceFilePathsArrays = await Promise.all(
-    platformSourceFilesArr.map(
-      async (pattern) =>
-        await globProm(pattern, { cwd: packagePath, absolute: true })
-    )
-  );
+  const sourceFilePathsArrays = await Promise.all(platformSourceFilesArr.map(async (pattern) => await globProm(pattern, { cwd: packagePath, absolute: true })));
 
   /**
    * Look just for Obj-C and Obj-C++ implementation files, ignoring headers.
@@ -266,9 +153,7 @@ async function getSourceFilePaths({
    *   '/Users/jamie/Documents/git/nativescript-magic-spells/dist/packages/react-native-module-test/ios/RNTestModule.m'
    * ]
    */
-  const sourceFilePaths = [...new Set(sourceFilePathsArrays.flat(1))].filter(
-    (sourceFilePath) => /\.mm?$/.test(sourceFilePath)
-  );
+  const sourceFilePaths = [...new Set(sourceFilePathsArrays.flat(1))].filter((sourceFilePath) => /\.mm?$/.test(sourceFilePath));
 
   return sourceFilePaths;
 }
@@ -301,18 +186,13 @@ function extractInterfaces(sourceCode: string) {
    *    ]
    * }
    */
-  const moduleNamesToMethodDescriptions = [
-    ...sourceCode.matchAll(
-      /\s*@implementation\s+([A-z0-9$]+)\s+(?:.|[\r\n])*?@end/gm
-    ),
-  ].reduce<ModuleNamesToMethodDescriptions>((acc, matches) => {
+  const moduleNamesToMethodDescriptions = [...sourceCode.matchAll(/\s*@implementation\s+([A-z0-9$]+)\s+(?:.|[\r\n])*?@end/gm)].reduce<ModuleNamesToMethodDescriptions>((acc, matches) => {
     const [fullMatch, objcClassName] = matches;
     if (!objcClassName) {
       return acc;
     }
 
-    const jsModuleName =
-      extractBridgeModuleAliasedName(fullMatch) || objcClassName;
+    const jsModuleName = extractBridgeModuleAliasedName(fullMatch) || objcClassName;
     if (!jsModuleName) {
       return acc;
     }
@@ -322,9 +202,7 @@ function extractInterfaces(sourceCode: string) {
      * @example
      * ['- (void)showWithRemappedName:(RCTPromiseResolveBlock)resolve withRejecter:(RCTPromiseRejectBlock)reject']
      */
-    const remappedMethods = [
-      ...fullMatch.matchAll(/\s*RCT_REMAP_METHOD\((.|[\r\n])*?\)*?\{$/gm),
-    ].map((match) => {
+    const remappedMethods = [...fullMatch.matchAll(/\s*RCT_REMAP_METHOD\((.|[\r\n])*?\)*?\{$/gm)].map((match) => {
       const [
         ,
         /** @example 'showWithRemappedName , show : (RCTPromiseResolveBlock)resolve withRejecter : (RCTPromiseRejectBlock)reject) {' */
@@ -339,23 +217,16 @@ function extractInterfaces(sourceCode: string) {
       ] = fromMethodName.split(/\s*,/);
 
       /** @example 'show : (RCTPromiseResolveBlock)resolve withRejecter : (RCTPromiseRejectBlock)reject' */
-      const methodUnmappedNameAndArgs = fromUnmappedMethodName
-        .split(')')
-        .slice(0, -1)
-        .join(')');
+      const methodUnmappedNameAndArgs = fromUnmappedMethodName.split(')').slice(0, -1).join(')');
 
       /** @example '- (void)showWithRemappedName:(RCTPromiseResolveBlock)resolve withRejecter:(RCTPromiseRejectBlock)reject' */
-      const signature = `- (void)${methodRemappedName.trim()}${methodUnmappedNameAndArgs
-        .trim()
-        .replace(/\s*:\s*/g, ':')};`;
+      const signature = `- (void)${methodRemappedName.trim()}${methodUnmappedNameAndArgs.trim().replace(/\s*:\s*/g, ':')};`;
 
       /** @example ['showWithRemappedName:(RCTPromiseResolveBlock)resolve', 'withRejecter:(RCTPromiseRejectBlock)reject'] */
       const params = signature.split('- (void)')[1].split(' ');
 
       /** @example 'showWithRemappedName:withRejecter:' */
-      const selector =
-        params.map((param) => param.split(':')[0]).join(':') +
-        (signature.includes(':') ? ':' : '');
+      const selector = params.map((param) => param.split(':')[0]).join(':') + (signature.includes(':') ? ':' : '');
 
       /** @example 'showWithRemappedNameWithRejecter' */
       const jsName = convertObjcSelectorToJsName(selector);
@@ -373,9 +244,7 @@ function extractInterfaces(sourceCode: string) {
      * @example
      * ['- (void)show:(RCTPromiseResolveBlock)resolve withRejecter:(RCTPromiseRejectBlock)reject']
      */
-    const exportedMethods = [
-      ...fullMatch.matchAll(/\s*RCT_EXPORT_METHOD\((.|[\r\n])*?\)*\{$/gm),
-    ].map((match) => {
+    const exportedMethods = [...fullMatch.matchAll(/\s*RCT_EXPORT_METHOD\((.|[\r\n])*?\)*\{$/gm)].map((match) => {
       const [
         ,
         /** @example 'show : (RCTPromiseResolveBlock)resolve withRejecter : (RCTPromiseRejectBlock)reject) {' */
@@ -383,23 +252,16 @@ function extractInterfaces(sourceCode: string) {
       ] = match[0].split(/RCT_EXPORT_METHOD\(\s*/);
 
       /** @example 'show : (RCTPromiseResolveBlock)resolve withRejecter : (RCTPromiseRejectBlock)reject' */
-      const methodNameAndArgs = fromMethodName
-        .split(')')
-        .slice(0, -1)
-        .join(')');
+      const methodNameAndArgs = fromMethodName.split(')').slice(0, -1).join(')');
 
       /** @example '- (void)show:(RCTPromiseResolveBlock)resolve withRejecter:(RCTPromiseRejectBlock)reject' */
-      const signature = `- (void)${methodNameAndArgs
-        .trim()
-        .replace(/\s*:\s*/g, ':')};`;
+      const signature = `- (void)${methodNameAndArgs.trim().replace(/\s*:\s*/g, ':')};`;
 
       /** @example ['show:(RCTPromiseResolveBlock)resolve', 'withRejecter:(RCTPromiseRejectBlock)reject'] */
       const params = signature.split('- (void)')[1].split(' ');
 
       /** @example 'show:withRejecter:' */
-      const selector =
-        params.map((param) => param.split(':')[0]).join(':') +
-        (signature.includes(':') ? ':' : '');
+      const selector = params.map((param) => param.split(':')[0]).join(':') + (signature.includes(':') ? ':' : '');
 
       /** @example 'showWithRejecter' */
       const jsName = convertObjcSelectorToJsName(selector);
@@ -415,9 +277,7 @@ function extractInterfaces(sourceCode: string) {
     const allMethods = [...remappedMethods, ...exportedMethods];
 
     if (!allMethods.length) {
-      console.warn(
-        `${logPrefix} Unable to extract any methods from RCTBridgeModule named "${jsModuleName}".`
-      );
+      console.warn(`${logPrefix} Unable to extract any methods from RCTBridgeModule named "${jsModuleName}".`);
     }
 
     acc[jsModuleName] = allMethods.map((method) => {
@@ -427,9 +287,7 @@ function extractInterfaces(sourceCode: string) {
        * Everything between brackets in the method signature.
        * @example ["void", "RCTPromiseResolveBlock", "RCTPromiseRejectBlock"]
        */
-      const types = [...signature.matchAll(/\(.*?\)/g)].map((match) =>
-        match[0].replace(/[()]/g, '')
-      );
+      const types = [...signature.matchAll(/\(.*?\)/g)].map((match) => match[0].replace(/[()]/g, ''));
 
       return {
         exportedName,
@@ -458,11 +316,7 @@ function extractInterfaces(sourceCode: string) {
   const interfaceDecl = Object.keys(moduleNamesToMethodDescriptions)
     .map((jsModuleName) => {
       const methodDescriptions = moduleNamesToMethodDescriptions[jsModuleName];
-      return [
-        `@interface ${jsModuleName}`,
-        methodDescriptions.map((record) => record.signature).join('\n\n'),
-        '@end',
-      ].join('\n');
+      return [`@interface ${jsModuleName}`, methodDescriptions.map((record) => record.signature).join('\n\n'), '@end'].join('\n');
     })
     .join('\n\n');
 
@@ -512,26 +366,12 @@ function convertObjcSelectorToJsName(selector: string): string {
  *   no alias was registered (in which case, the Obj-C class name should be used
  *   for the bridge module as-is).
  */
-function extractBridgeModuleAliasedName(
-  classImplementation: string
-): string | undefined {
-  const exportModuleMatches = [
-    ...classImplementation.matchAll(/RCT_EXPORT_MODULE\((.*)\)/gm),
-  ];
-  const exportModuleNoLoadMatches = [
-    ...classImplementation.matchAll(/RCT_EXPORT_MODULE_NO_LOAD\((.*)\)/gm),
-  ];
-  const exportPreRegisteredModuleNoLoadMatches = [
-    ...classImplementation.matchAll(
-      /RCT_EXPORT_PRE_REGISTERED_MODULE\((.*)\)/gm
-    ),
-  ];
+function extractBridgeModuleAliasedName(classImplementation: string): string | undefined {
+  const exportModuleMatches = [...classImplementation.matchAll(/RCT_EXPORT_MODULE\((.*)\)/gm)];
+  const exportModuleNoLoadMatches = [...classImplementation.matchAll(/RCT_EXPORT_MODULE_NO_LOAD\((.*)\)/gm)];
+  const exportPreRegisteredModuleNoLoadMatches = [...classImplementation.matchAll(/RCT_EXPORT_PRE_REGISTERED_MODULE\((.*)\)/gm)];
 
-  return (
-    exportModuleMatches[0]?.[1] ||
-    exportModuleNoLoadMatches[0]?.[1] ||
-    exportPreRegisteredModuleNoLoadMatches[0]?.[1]
-  );
+  return exportModuleMatches[0]?.[1] || exportModuleNoLoadMatches[0]?.[1] || exportPreRegisteredModuleNoLoadMatches[0]?.[1];
 }
 
 /**
@@ -542,13 +382,7 @@ function extractBridgeModuleAliasedName(
  * @param args.outputPodfilePath An absolute path to output the Podfile to.
  * @returns A Promise to write the podfile into the specified location.
  */
-async function writePodfile({
-  autolinkedDeps,
-  outputPodfilePath,
-}: {
-  autolinkedDeps: string[];
-  outputPodfilePath: string;
-}) {
+async function writePodfile({ autolinkedDeps, outputPodfilePath }: { autolinkedDeps: string[]; outputPodfilePath: string }) {
   /**
    * Depending on React and/or React-Core supports RNPodspecs.h, which imports
    * the <React/RCTBridgeModule.h> header. I'm not sure whether to include
@@ -566,7 +400,7 @@ async function writePodfile({
    * Depending on React-Native-Podspecs allows us to include our RNPodspecs.h
    * file.
    */
-  const reactNativePodspecsDep = `pod 'React-Native-Podspecs', path: File.join(File.dirname(\`node --print "require.resolve('@ammarahm-ed/react-native-podspecs/package.json')"\`), "platforms/ios/React-Native-Podspecs.podspec")`;
+  const reactNativePodspecsDep = `pod 'React-Native-Podspecs', path: File.join(File.dirname(\`node --print "require.resolve('@ammarahm-ed/react-native/package.json')"\`), "platforms/ios/React-Native-Podspecs.podspec")`;
 
   const podfileContents = [
     '# This file will be updated automatically by hooks/before-prepareNativeApp.js.',
@@ -592,28 +426,10 @@ async function writePodfile({
  * @param args.outputHeaderPath An absolute path to output the header to.
  * @returns A Promise to write the header file into the specified location.
  */
-async function writeHeaderFile({
-  headerEntries,
-  outputHeaderPath,
-}: {
-  headerEntries: string[];
-  outputHeaderPath: string;
-}) {
-  const RNPodspecsInterface = [
-    '// START: react-native-podspecs placeholder interface',
-    '@interface RNPodspecs: NSObject',
-    '@end',
-    '// END: react-native-podspecs placeholder interface',
-  ].join('\n');
+async function writeHeaderFile({ headerEntries, outputHeaderPath }: { headerEntries: string[]; outputHeaderPath: string }) {
+  const RNPodspecsInterface = ['// START: react-native placeholder interface', '@interface RNPodspecs: NSObject', '@end', '// END: react-native placeholder interface'].join('\n');
 
-  const header = [
-    '#import <React/RCTBridgeModule.h>',
-    '',
-    headerEntries.join('\n\n'),
-    '',
-    RNPodspecsInterface,
-    '',
-  ].join('\n');
+  const header = ['#import <React/RCTBridgeModule.h>', '', headerEntries.join('\n\n'), '', RNPodspecsInterface, ''].join('\n');
 
   return await writeFile(outputHeaderPath, header, { encoding: 'utf-8' });
 }
@@ -634,38 +450,23 @@ async function writeHeaderFile({
  * @param args.outputModuleMapPath An absolute path to output the module map to.
  * @returns A Promise to write the module map file into the specified location.
  */
-async function writeModuleMapFile({
-  moduleNamesToMethodDescriptions,
-  outputModuleMapPath,
-}: {
-  moduleNamesToMethodDescriptions: ModuleNamesToMethodDescriptions;
-  outputModuleMapPath: string;
-}) {
-  const moduleNamesToMethodDescriptionsMinimal = Object.keys(
-    moduleNamesToMethodDescriptions
-  ).reduce<ModuleNamesToMethodDescriptionsMinimal>((acc, moduleName) => {
+async function writeModuleMapFile({ moduleNamesToMethodDescriptions, outputModuleMapPath }: { moduleNamesToMethodDescriptions: ModuleNamesToMethodDescriptions; outputModuleMapPath: string }) {
+  const moduleNamesToMethodDescriptionsMinimal = Object.keys(moduleNamesToMethodDescriptions).reduce<ModuleNamesToMethodDescriptionsMinimal>((acc, moduleName) => {
     const methodDescriptions = moduleNamesToMethodDescriptions[moduleName];
 
-    acc[moduleName] = methodDescriptions.reduce<MethodDescriptionsMinimal>(
-      (innerAcc, methodDescription) => {
-        const { exportedName, jsName, types } = methodDescription;
-        innerAcc[exportedName] = {
-          j: jsName,
-          t: types.map((paramType) => parseObjcTypeToEnum(paramType)),
-        };
-        return innerAcc;
-      },
-      {}
-    );
+    acc[moduleName] = methodDescriptions.reduce<MethodDescriptionsMinimal>((innerAcc, methodDescription) => {
+      const { exportedName, jsName, types } = methodDescription;
+      innerAcc[exportedName] = {
+        j: jsName,
+        t: types.map((paramType) => parseObjcTypeToEnum(paramType)),
+      };
+      return innerAcc;
+    }, {});
 
     return acc;
   }, {});
 
-  return await writeFile(
-    outputModuleMapPath,
-    JSON.stringify(moduleNamesToMethodDescriptionsMinimal) + '\n',
-    { encoding: 'utf-8' }
-  );
+  return await writeFile(outputModuleMapPath, JSON.stringify(moduleNamesToMethodDescriptionsMinimal) + '\n', { encoding: 'utf-8' });
 }
 
 interface MethodDescriptionsMinimal {
@@ -698,31 +499,21 @@ function parseObjcTypeToEnum(objcType: string): RNObjcSerialisableType {
   // nullable annotations, because that's our default nullability for each type
   // that supports nullability.
   const splitOnWhitespace = objcType.split(/\s+/);
-  const nonnull = splitOnWhitespace
-    .map((split) => split.trim().toLowerCase())
-    .includes('nonnull');
+  const nonnull = splitOnWhitespace.map((split) => split.trim().toLowerCase()).includes('nonnull');
 
   const splitBeforeGeneric = objcType.split('<')[0];
 
   if (splitBeforeGeneric.includes('NSString')) {
-    return nonnull
-      ? RNObjcSerialisableType.nonnullString
-      : RNObjcSerialisableType.string;
+    return nonnull ? RNObjcSerialisableType.nonnullString : RNObjcSerialisableType.string;
   }
   if (splitBeforeGeneric.includes('NSNumber')) {
-    return nonnull
-      ? RNObjcSerialisableType.nonnullNumber
-      : RNObjcSerialisableType.number;
+    return nonnull ? RNObjcSerialisableType.nonnullNumber : RNObjcSerialisableType.number;
   }
   if (splitBeforeGeneric.includes('NSDictionary')) {
-    return nonnull
-      ? RNObjcSerialisableType.nonnullObject
-      : RNObjcSerialisableType.object;
+    return nonnull ? RNObjcSerialisableType.nonnullObject : RNObjcSerialisableType.object;
   }
   if (splitBeforeGeneric.includes('NSArray')) {
-    return nonnull
-      ? RNObjcSerialisableType.nonnullArray
-      : RNObjcSerialisableType.array;
+    return nonnull ? RNObjcSerialisableType.nonnullArray : RNObjcSerialisableType.array;
   }
 
   switch (objcType) {
@@ -749,63 +540,42 @@ function parseObjcTypeToEnum(objcType: string): RNObjcSerialisableType {
 }
 
 /**
- * On iOS, autolink any React Native native modules.
+ * Given a list of dependencies, autolinks any podspecs found within them, using
+ * the React Native Community CLI search rules.
+ * @param {object} args
+ * @param args.dependencies The names of the npm dependencies to examine for
+ *   autolinking.
+ * @param args.projectDir The project directory (relative to which the package
+ *   should be resolved).
+ * @param args.outputHeaderPath An absolute path to output the header to.
+ * @param args.outputPodfilePath An absolute path to output the Podfile to.
+ * @param args.outputModuleMapPath An absolute path to output the module map to.
+ *   (Just a JSON file. Not to be confused with a clang module.modulemap file).
+ * @returns a list of package names in which podspecs were found and autolinked.
  */
-export = async function (hookArgs: HookArgs) {
-  const {
-    projectData,
-    platformData: { platformNameLowerCase },
-  } = hookArgs;
+export async function autolinkIos({ dependencies, projectDir, outputHeaderPath, outputPodfilePath, outputModuleMapPath }: { dependencies: string[]; projectDir: string; outputHeaderPath: string; outputPodfilePath: string; outputModuleMapPath: string }) {
+  const autolinkingInfo = (await Promise.all(dependencies.map((packageName) => mapPackageNameToAutolinkingInfo(packageName, projectDir)))).filter((p) => !!p).flat(1);
 
-  // For now, we handle only iOS (as platforms other than iOS are experimental
-  // on NativeScript). We might come back for macOS one day! :D
-  if (platformNameLowerCase !== 'ios') {
-    return;
-  }
+  const moduleNamesToMethodDescriptionsCombined = autolinkingInfo.reduce((acc, { moduleNamesToMethodDescriptions }) => {
+    return Object.assign(acc, moduleNamesToMethodDescriptions);
+  }, {});
 
-  const { devDependencies, dependencies, ignoredDependencies, projectDir } =
-    projectData;
+  await Promise.all([
+    await writeHeaderFile({
+      headerEntries: autolinkingInfo.map(({ headerEntry }) => headerEntry),
+      outputHeaderPath,
+    }),
 
-  const ignoredDepsSet = new Set(ignoredDependencies);
-  const depsArr = Object.keys({ ...devDependencies, ...dependencies }).filter(
-    (key) => !ignoredDepsSet.has(key)
-  );
+    await writePodfile({
+      autolinkedDeps: autolinkingInfo.map(({ podfileEntry }) => podfileEntry),
+      outputPodfilePath,
+    }),
 
-  console.log(`${logPrefix} Autolinking React Native iOS native modules...`);
+    await writeModuleMapFile({
+      moduleNamesToMethodDescriptions: moduleNamesToMethodDescriptionsCombined,
+      outputModuleMapPath,
+    }),
+  ]);
 
-  /**
-   * @example '/Users/jamie/Documents/git/nativescript-magic-spells/dist/packages/react-native-podspecs'
-   */
-  const reactNativePodspecsPackageDir = path.dirname(__dirname);
-
-  const outputHeaderPath = path.resolve(
-    reactNativePodspecsPackageDir,
-    'platforms/ios/lib/RNPodspecs.h'
-  );
-  const outputPodfilePath = path.resolve(
-    reactNativePodspecsPackageDir,
-    'platforms/ios/Podfile'
-  );
-  const outputModuleMapPath = path.resolve(
-    reactNativePodspecsPackageDir,
-    'platforms/ios/lib/modulemap.json'
-  );
-
-  const packageNames = await autolinkIos({
-    dependencies: depsArr,
-    projectDir,
-    outputHeaderPath,
-    outputPodfilePath,
-    outputModuleMapPath,
-  });
-
-  const green = '\x1b[32m';
-  const reset = '\x1b[0m';
-  packageNames.forEach((packageName) =>
-    console.log(`${logPrefix} Autolinked ${green}${packageName}${reset}!`)
-  );
-
-  console.log(
-    `${logPrefix} ... Finished autolinking React Native iOS native modules.`
-  );
-};
+  return autolinkingInfo.map(({ packageName }) => packageName);
+}

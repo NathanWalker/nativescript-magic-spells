@@ -16,8 +16,6 @@
           "packages/react-native/postinstall.js",
           "packages/react-native/preuninstall.js",
           "packages/react-native/react-android/**/*",
-          "packages/react-native/platforms/ios/React.podspec",
-          "packages/react-native/platforms/ios/React-Core.podspec",
           "LICENSE",
           {
             "glob": "**/*",
